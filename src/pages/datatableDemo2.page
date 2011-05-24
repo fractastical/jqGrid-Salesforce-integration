@@ -1,0 +1,7 @@
+<apex:page standardController="Campaign">
+ 
+  <div style="height:110px">
+    <c:enhancedDatatable objectName="CampaignMember" columns="ContactId, Contact.FirstName, Contact.LastName, Status" displaySearch="true" alphabeticPaginateColumn="Contact.LastName" secondaryObjectId="ContactId" requiredFieldName="CampaignId" requiredFieldValue="{!Campaign.id}" filterString="where CampaignId = '{!Campaign.id}'"  multiselect="true" editable="true" />   
+</div>
+
+</apex:page>

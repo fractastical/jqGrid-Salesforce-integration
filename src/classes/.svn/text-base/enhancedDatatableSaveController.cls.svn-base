@@ -1,0 +1,177 @@
+public class enhancedDatatableSaveController {
+
+  public List<String> paramValues { get; set; }
+  public List<String> paramKeys { get; set; }
+  public Map<String,String> params { get; set; }
+  Map<String, Schema.SObjectType> gd;
+  SObjectType sot;
+  String outerobjectid;  
+  
+  public enhancedDatatableSaveController() {
+  	
+  	  params = ApexPages.currentPage().getParameters();
+      paramValues = params.values();
+      paramKeys = new List <String>();
+      paramKeys.addAll(params.keySet());
+      gd = Schema.getGlobalDescribe();
+      String soType = ApexPages.currentPage().getParameters().get('type');
+      sot = gd.get(soType);
+	  outerobjectid = ApexPages.currentPage().getParameters().get('outerobjectid');
+	        
+      
+      for(String s: paramKeys)  
+          System.debug('k:' + s);
+      for(String s: paramValues)
+          System.debug('v:' + s);
+        
+          
+  }
+  
+  public void saveData() 
+  {
+
+      String soid = ApexPages.currentPage().getParameters().get('id');
+  	  SObject outerSObject;
+  	  
+  	  System.debug(soid + 'ooi:' + outerobjectid);
+  	  if(soid != null && ApexPages.currentPage().getParameters().get('oper') == 'edit')
+      {
+      	//Schema.SObjectType sot = getObjectType(soid);  
+      	SObject so = Database.query('SELECT id from ' + sot.getDescribe().getName() + ' where id=\'' + soid + '\' limit 1');
+      	if(outerobjectid != null && outerobjectid != '')  
+      	{
+      		String osoid = ApexPages.currentPage().getParameters().get(outerobjectid);
+      		System.debug('QUERY' + 'SELECT id from ' + getObjectType(osoid).getDescribe().getName() + ' where id=\'' + osoid + '\' limit 1');
+      		if(osoid != null)
+	      		outerSObject = Database.query('SELECT id from ' + getObjectType(osoid).getDescribe().getName() + ' where id=\'' + osoid + '\' limit 1');
+      		
+      	}
+      		
+      		
+		so = putParams(so, outerSObject);
+      	update so;
+      	
+
+	  	}// if   
+	  	else if (ApexPages.currentPage().getParameters().get('oper') == 'add')
+	  	{
+	  		SObject so = sot.newSObject();
+			so = putParams(so, null);
+			insert so;
+	  		
+	  	}
+  	
+  }
+  
+    public SObject putParams(SObject so, SObject outsideSObject) {
+    	
+    	SObjectType outsideSot;
+    	Boolean useOutside = false;  
+    	
+    	for(String k : paramKeys) {
+	      		if(k != 'oper' && k != 'id' && k != 'type' && k != 'outerobjectid' && k != 'null') {       
+	      			String val = params.get(k);  
+	      			System.debug('k:' + k);
+	      			System.debug('v:' + k);
+	      			
+	      			List<String> ks = k.split('[.]');
+	      			
+	      			if(ks.size() == 2)
+	      			{
+	      				String objName = ks.get(0);
+		      			System.debug('OBJNAME1' + objName);
+
+	      				if(outsideSObject == null && outsideSot == null)
+	      				{
+		      				if(objName.endsWith('__r'))
+		      					objName = objName.substring(0,objName.length() - 1) + 'c';
+		      				System.debug('OBJNAME2' + objName);
+		      			    outsideSot = gd.get(objName);
+		      			    outsideSObject = outsideSot.newSObject();
+	      				}
+	      				k = ks.get(1);
+		      			try {
+				      		outsideSObject.put(k, (Object) val);
+		      			} catch (Exception e) {
+		      				try {
+				      			outsideSObject.put(k, (Object) Double.valueOf(val));
+				      			
+		      				} catch (Exception ex) {
+		      					try {
+				      				outsideSObject.put(k, (Object) Decimal.valueOf(val));
+				      			
+		      					} catch (Exception exe) {      						
+		      					
+		      					
+		      					}
+		      				}
+		      			}  // catch
+	      				
+	      			}
+	      			else 
+	      			{
+						System.debug('putting k:' + k + ' v:' + val);
+		      			try {
+				      		so.put(k, (Object) val);
+		      			} catch (Exception e) {
+		      				try {
+				      			so.put(k, (Object) Double.valueOf(val));
+				      			
+		      				} catch (Exception ex) {
+		      					try {
+				      				so.put(k, (Object) Decimal.valueOf(val));
+				      			
+		      					} catch (Exception exe) {      			  			
+		      					
+		      					
+		      					}
+		      				}
+		      			}  // catch
+	      			}
+	      		} // if
+	      					
+	     	 } //for
+	     	 
+	    if(outsideSObject != null) {
+	    	upsert outsideSObject;
+			if(outerObjectId != null) {
+				try {
+					
+			    	so.put(outerObjectId, outsideSObject.id);
+	 	   			//System.debug('ooi:' + outerObjectId + ' v:' + outsideSObject.id);
+    		  
+    		  	} catch (SObjectException soex) {  
+    		  		//Happens when SObject has already been initialized. 
+    		  	}
+    		  
+			}
+	    }
+    	
+    	return so;
+    	
+    	
+    }
+    
+
+    public Schema.SObjectType getObjectType(id subject){
+    	
+                Schema.SObjectType result;  
+                string target = subject;
+                string keyPrefix;
+               
+
+                for(Schema.SObjectType describe: gd.values() ){
+
+                        keyPrefix = describe.getDescribe().getKeyPrefix();
+
+                        if(keyPrefix != null && target.startsWith(keyPrefix)){
+
+                                result = describe;
+                                break; //no need to keep looking
+                        }
+                }
+                return result;
+        }
+
+
+}

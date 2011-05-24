@@ -1,0 +1,253 @@
+<apex:component controller="EnhancedDatatableController" allowDML="true" access="global" >
+            
+    <apex:attribute name="objectName" access="global" description="Name of object" type="String" required="false" assignTo="{!objectName}" />
+    <apex:attribute name="columns" access="global" description="Comma delimited list of columns to display" type="String" required="true" assignTo="{!columnString}" />
+    <apex:attribute name="editable" access="global" description="Can fields be edited?" type="Boolean" required="false" assignTo="{!editable}" />
+    <apex:attribute name="width" access="global" description="width in pixels or percentage" type="String" required="false" assignTo="{!myWidth}" />  
+    <apex:attribute name="height" access="global" description="height in pixels or percentage" type="String" required="false" assignTo="{!myHeight}" />
+    <apex:attribute name="rowNumber" access="global" description="Number of rows to display at start" type="String" required="false" assignTo="{!myRowNumber}" />
+    <apex:attribute name="rowOptions" access="global" description="Comma delimited list of row options" type="String" required="false" assignTo="{!myRowOptions}" />
+    <apex:attribute name="secondaryObjectId" access="global" description="Field which contains the id of secondary object" type="String" required="false" assignTo="{!outerObjectId}" />    
+    <apex:attribute name="requiredFieldName" access="global" description="Field which is required in order to save the object" type="String" required="false" assignTo="{!requiredFieldName}" />
+    <apex:attribute name="requiredFieldValue" access="global" description="Value of field which is required in order to save the object" type="String" required="false" assignTo="{!requiredFieldValue}" />
+	<apex:attribute name="multiselect" access="global" description="Should the ability to select and update multiple rows at the same time be enabled? (currently works only with Status" type="Boolean" required="false" assignTo="{!multiselect}" />
+    <apex:attribute name="displaySearch" access="global" description="Should search bar be displayed?" type="Boolean" required="false" assignTo="{!displaySearch}" />
+    <apex:attribute name="alphabeticPaginateColumn" access="global" description="Column by which to display first args at top" type="String" required="false" assignTo="{!alphabeticPaginateColumn}" />
+    <apex:attribute name="filterString" access="global" description="SOQL string to append to the search query. Must begin with WHERE" type="String" required="false" assignTo="{!filterString}" />
+
+    <link rel="stylesheet" type="text/css" href="http://ajax.googleapis.com/ajax/libs/jqueryui/1.8.1/themes/cupertino/jquery-ui.css" />    
+    <link rel="stylesheet" type="text/css" href="{!URLFOR($Resource.JQGrid372,'css/ui.jqgrid.css')}" />    
+  
+    <script type="text/javascript" src="http://ajax.googleapis.com/ajax/libs/jquery/1.4.2/jquery.min.js"></script>
+    <script type="text/javascript" src="{!$Resource.loadJQGrid}"></script>
+
+    <script type="text/javascript">
+    var modules = [
+        { include: true, incfile:'{!URLFOR($Resource.JQGrid38,'js/i18n/grid.locale-en.js')}'}, // jqGrid translation
+        { include: true, incfile:'{!URLFOR($Resource.JQGrid38,'js/grid.base.js')}'}, // jqGrid base
+        { include: true, incfile:'{!URLFOR($Resource.JQGrid38,'js/grid.common.js')}'}, // jqGrid common for editing
+        { include: true, incfile:'{!URLFOR($Resource.JQGrid38,'js/grid.formedit.js')}'}, // jqGrid Form editing
+        { include: true, incfile:'{!URLFOR($Resource.JQGrid38,'js/grid.inlinedit.js')}'}, // jqGrid inline editing
+        { include: true, incfile:'{!URLFOR($Resource.JQGrid38,'js/grid.celledit.js')}'}, // jqGrid cell editing
+        { include: true, incfile:'{!URLFOR($Resource.JQGrid38,'js/grid.subgrid.js')}'}, //jqGrid subgrid
+        { include: true, incfile:'{!URLFOR($Resource.JQGrid38,'js/grid.treegrid.js')}'}, //jqGrid treegrid
+        { include: true, incfile:'{!URLFOR($Resource.JQGrid38,'js/grid.custom.js')}'}, //jqGrid custom 
+        { include: true, incfile:'{!URLFOR($Resource.JQGrid38,'js/grid.postext.js')}'}, //jqGrid postext
+        { include: true, incfile:'{!URLFOR($Resource.JQGrid38,'js/grid.tbltogrid.js')}'}, //jqGrid table to grid 
+        { include: true, incfile:'{!URLFOR($Resource.JQGrid38,'js/grid.setcolumns.js')}'}, //jqGrid setcolumns
+        { include: true, incfile:'{!URLFOR($Resource.JQGrid38,'js/grid.import.js')}'}, //jqGrid import
+        { include: true, incfile:'{!URLFOR($Resource.JQGrid38,'js/jquery.fmatter.js')}'}, //jqGrid formater
+        { include: true, incfile:'{!URLFOR($Resource.JQGrid38,'js/grid.grouping.js')}'}, //grouping
+        { include: true, incfile:'{!URLFOR($Resource.JQGrid38,'js/jqModal.js')}'}, //xmljson utils
+        { include: true, incfile:'{!URLFOR($Resource.JQGrid38,'js/jqDnR.js')}'}, //xmljson utils
+        { include: true, incfile:'{!URLFOR($Resource.JQGrid38,'js/JsonXml.js')}'}, //xmljson utils
+        { include: true, incfile:'{!URLFOR($Resource.JQGrid38,'js/grid.jqueryui.js')}'}, //xmljson utils
+        { include: true, incfile:'{!URLFOR($Resource.JQGrid38,'js/jquery.searchFilter.js')}'} // search Plugin
+    ];
+		
+		
+	
+	jqGridInclude(modules);
+
+	</script>
+    <script type="text/javascript" src="{!URLFOR($Resource.JQInfieldLabels,'InFieldLabels/src/jquery.infieldlabel.min.js')}"></script>
+
+        
+    {!onLoad}
+
+    <style>
+    
+    #toppanel { position:relative; top:4px; left:4px; margin-bottom:12px; }
+    #{!uid}searchlabel  { position:absolute; top:4px; left:6px;}
+
+    </style>    
+    
+    <script type="text/javascript">
+
+            $.jgrid.no_legacy_api = true;
+            $.jgrid.useJSON = true;
+
+        function getWidthInPct(percent){
+            screen_res = ($('#parentDiv').width())*0.99;
+            col = parseInt((percent*(screen_res/100)));
+            return col;
+        }
+
+        function getHeightInPct(percent){
+            screen_res = ($('#parentDiv').height())*0.99;
+            col = parseInt((percent*(screen_res/100)));
+            return col;
+        }
+        
+        function search{!uid}(arg, field, oper)
+        {
+            if(!oper) oper = 'bw';
+            if(field)   
+                $enhanced{!uid}.jqGrid('setGridParam',{search:true, postData:{searchOper:oper,searchField:field, searchString:arg}});
+            else {   
+               
+                var filter = {"groupOp":"OR","rules":{!colRulesJson} };            
+                $enhanced{!uid}.jqGrid('setGridParam',{search:true, postData:{filters:filter} });
+  
+                }  
+                
+            $enhanced{!uid}.trigger("reloadGrid");
+            return false;
+        }
+        
+        function updateRowStatus(id, status) 
+        {
+            $enhanced{!uid}.setRowData(id, { "Status" : status });
+        }
+
+        $(document).ready(function() {
+
+            $enhanced{!uid} = $('#{!uid}');
+            var lastsel2;
+
+            $enhanced{!uid}.jqGrid({
+                datatype: "local",
+                colNames:{!colNamesJson},
+                colModel:{!colModelJson},
+                rowNum: {!myRowNumber},
+                rowList: [{!myRowOptions}],
+                pager: '#pager',    
+                sortname: 'id',
+                viewrecords: true,
+                multiselect: {!multiselect},
+		        multiboxonly: {!multiselect},
+                sortorder: "desc",
+                caption: "{!objectLabel}",
+                width:getWidth({!myWidth}),
+                ondblClickRow: function(id){ if(id && id!==lastsel2){ $enhanced{!uid}.jqGrid('restoreRow',lastsel2); $enhanced{!uid}.jqGrid('editRow',id,true); lastsel2=id; } },
+                height:getHeight({!myHeight}),
+                editurl: "{!URLFOR($Page.saveData)}?type={!objectName}&outerobjectid={!outerObjectId}&{!requiredFieldName}={!requiredFieldValue}"
+              });  
+                
+            $enhanced{!uid}.jqGrid('navGrid','#pager', { view:true, del:false, edit:false }, 
+                {}, // use default settings for edit
+                { closeAfterAdd : true }, // use default settings for add  
+                {},  // 
+                {multipleSearch : true}, // enable advanced searching
+                {closeOnEscape:true} /* allow the view dialog to be closed when user press ESC key*/
+            );
+
+            var jsondata = {!jsonData};
+            
+            for(var i=0; i <= jsondata.length; i++) 
+                $enhanced{!uid}.jqGrid('addRowData',i+1,jsondata[i]);
+
+            $enhanced{!uid}.trigger("reloadGrid");
+
+
+        });
+
+
+  </script>
+
+
+
+
+  <apex:outputPanel rendered="{!NOT(heightIsPercent)}" >
+      <script type="text/javascript">
+          function getHeight(height) {
+              return height;
+          }
+      </script>
+  </apex:outputPanel>
+    <apex:outputPanel rendered="{!heightIsPercent}" >
+      <script type="text/javascript">
+          function getHeight(height) {
+              height = getHeightInPct(height);
+              return height;
+          }
+      </script>
+  </apex:outputPanel>  
+  <apex:outputPanel rendered="{!widthIsPercent}" >
+      <script type="text/javascript">
+          function getWidth(width) {
+              width = getWidthInPct(width);
+              return width;
+          }
+      </script>
+  </apex:outputPanel>
+  
+
+  <apex:outputPanel rendered="{!NOT(widthIsPercent)}" >
+      <script type="text/javascript">
+          function getWidth(width) {
+              return width;
+          }
+      </script>
+  </apex:outputPanel>
+  
+      <div id="toppanel">  
+          <apex:outputPanel rendered="{!displaySearch}">  
+    
+            <label id="{!uid}searchlabel" for="{!uid}searchbox">Quick Search</label>
+            <input id="{!uid}searchbox" name="{!uid}searchbox" type="text" size="12"/>&nbsp;&nbsp;&nbsp;
+            <script type="text/javascript"> 
+            
+                    $(document).ready(function() {
+            
+                        $('#{!uid}searchlabel').inFieldLabels();
+                        ${!uid}searchbox = $('#{!uid}searchbox');
+                        ${!uid}searchbox.keyup(function() {
+                            search{!uid}(${!uid}searchbox.val());                   
+                        });
+            
+                    });
+            
+            
+             </script>
+            
+      
+          </apex:outputPanel>   
+            
+          <apex:outputPanel rendered="{!alphabeticPaginate}"> 
+            
+            <apex:repeat value="{!alphabet}" var="l">
+            
+                <a onclick="search{!uid}('{!l}', '{!alphabeticPaginateColumn2}', 'bw');">{!l}</a>&nbsp;
+            
+            </apex:repeat>
+            
+            <a onclick="search{!uid}('', '{!alphabeticPaginateColumn2}', 'bw');">All</a>&nbsp;
+            
+      </apex:outputPanel> 
+      
+     </div>
+      
+        <apex:outputPanel rendered="{!multiselect}" >
+        		<div id="multiselectpanel" style="padding-left:5px;margin-bottom:8px;">
+			        <apex:repeat value="{!fullStatuses}" var="s">
+				        <script type="text/javascript">  
+			
+					        function update{!uid}{!s.abbrevStatus}() {   
+					        
+					          var ids = $enhanced{!uid}.getGridParam('selarrrow');
+					          for ( var i in ids )
+					          {
+					          	 $.ajax({
+								  url: '{!URLFOR($Page.saveData)}?type={!objectName}&oper=edit&id=' + ids[i] + '&status={!s.status}',
+								  success: updateRowStatus(ids[i], '{!s.status}')    
+								});
+					          }
+					        
+					        }
+				        </script>
+			        
+				        <a onclick="update{!uid}{!s.abbrevStatus}();">Set as {!s.status}</a>&nbsp;
+			      </apex:repeat>
+			</div>	  
+	</apex:outputPanel>
+	  
+      
+      
+    
+    
+<div id="parentDiv" style="width:100%;height:100%"><table id="{!uid}" ></table> </div>  
+<div id="pager"></div> 
+    
+
+</apex:component>

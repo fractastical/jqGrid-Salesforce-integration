@@ -1,0 +1,17 @@
+K 25
+svn:wc:ra_dav:version-url
+V 50
+/svn/titaniainc_jqgrid4salesforce/!svn/ver/1/trunk
+END
+.project
+K 25
+svn:wc:ra_dav:version-url
+V 59
+/svn/titaniainc_jqgrid4salesforce/!svn/ver/2/trunk/.project
+END
+salesforce.schema
+K 25
+svn:wc:ra_dav:version-url
+V 68
+/svn/titaniainc_jqgrid4salesforce/!svn/ver/2/trunk/salesforce.schema
+END
